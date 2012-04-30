@@ -1,0 +1,73 @@
+sub2srt  - Convert subtitles from ".sub" to subviewer ".srt" format
+
+
+(c) 2003-2005 Roland "Robelix" Obermayer <roland\@robelix.com>
+Project Homepage: http://www.robelix.com/sub2srt/
+
+
+sub2srt is a simple tool to convert 2 common subtitle formats (microdvd
+and subrip - both are known as ".sub") to subviewer ".srt" format.
+This is the format ogmmerge accepts for multiplexing into ogm streams.
+
+
+This is Beta Software!
+Use it at your own risk! It works fine with several files I've got, but
+it may fail with your's.
+It's a quick hack written without any docs about the file formats - I
+just had a look how the files look like.
+Please report bugs, problems, patches... to sub2srt@robelix.com
+
+
+What it does not:
+-----------------
+It does not - and will never - convert DVD-subtitles or vobsub.
+Google on if you need this ;)
+
+
+Installation:
+-------------
+Not necessary ;) - it's just a single perl-script.
+But you may want to copy sub2srt to a directory that's in your $PATH - 
+like /usr/local/bin or /usr/bin.
+
+
+Usage:
+------
+Run sub2srt --help to get more info.
+
+
+Requirements:
+-------------
+Perl
+
+
+License:
+--------
+GPL 2
+Have a look to the file COPYING included in the archive.
+
+
+Changelog:
+----------
+15 Jan 2005: Roland Obermayer <roland@robelix.com>
+ * sub2srt-0.5.3
+ - Added support for a third input format "txtsub"
+ - Prompt if overwriting files
+ - Several minor changes
+
+11 Jan 2005: Panayotis Katsaloulis <panayotis@panayotis.com>
+ - Handle both types of NTSC frame rate, as a convenient command line option
+ - Fixed a bug in the actual NTSC framerate
+
+10 Nov 2003: Roland Obermayer <roland@robelix.com>
+ * sub2srt-0.5.2
+ - The fps option now accepts non-integer values
+ - Added ntsc option
+
+31 Aug 2003: Roland Obermayer <roland@robelix.com>
+ * sub2srt-0.5.1
+ - Bugfix in the microdvd conversion routine
+
+26 Aug 2003: Roland Obermayer <roland@robelix.com>
+ * sub2srt-0.5
+ - Initial release
