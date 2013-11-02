@@ -49,6 +49,10 @@ Have a look to the file COPYING included in the archive.
 
 Changelog:
 ----------
+02 Nov 2013: Krzysztof Trybowski
+ * sub2srt-0.5.4
+ - Added support for 2 input formats "mpl2" and "tmp"
+ 
 15 Jan 2005: Roland Obermayer <roland@robelix.com>
  * sub2srt-0.5.3
  - Added support for a third input format "txtsub"
