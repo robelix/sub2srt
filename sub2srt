@@ -18,7 +18,8 @@
 #    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 use strict;
-my $version = "0.5.3";
+use warnings;
+my $version = "0.5.4";
 
 use Getopt::Long;
 Getopt::Long::Configure("pass_through","no_ignore_case");
@@ -109,9 +110,16 @@ elsif ($format eq "microdvd") {
 elsif ($format eq "txtsub") {
 	conv_txtsub();
 }
+elsif ($format eq "mpl2") {
+	conv_mpl2();
+}
+elsif ($format eq "tmp") {
+	conv_tmp();
+}
 elsif ($format eq "srt") {
 	print "Input file is already subviewer srt format.\n";
 }
+
 
 close INFILE;
 close OUTFILE;
@@ -154,7 +162,6 @@ sub conv_subrip {
 	print "$failed lines failed\n" if (!$quiet && $failed);
 }
 
-
 sub conv_microdvd {
 	my $converted = 0;
 	my $failed = 0;
@@ -182,6 +189,85 @@ sub conv_microdvd {
 	}
 	print "$converted subtitles written\n" if (!$quiet);
 	print "$failed lines failed\n" if (!$quiet && $failed);
+}
+
+sub conv_mpl2 {
+	my $converted = 0;
+	my $failed = 0;
+
+	while (my $line = <INFILE>) {
+		$line =~ s/[\n\r]*$//;
+		if ( $line =~ m/^\[(\d+)\]\[(\d+)\](.+)$/ ) {
+			my $starttime = seconds_2_time(int ($1 / 10)).",".($1 %10)."00";
+			my $endtime = seconds_2_time(int ($2 / 10)).",".($2 %10)."00";
+			my $text = $3;
+			$converted++;
+						
+			print "  Subtitle #$converted: start: $starttime, end: $endtime, Text: $text\n" if ($debug);
+			
+			# convert line-ends
+			$text =~ s/\|/$le/g;
+			
+			write_srt($converted, $starttime, $endtime, $text);
+			
+		} else {
+			$failed++;
+			print "  failed to convert: $line\n" if ($debug);
+		}
+	}
+	print "$converted subtitles written\n" if (!$quiet);
+	print "$failed lines failed\n" if (!$quiet && $failed);
+}
+
+sub conv_tmp {
+	my $converted = 0;
+	my $failed = 0;
+	while (my $line = <INFILE>) {
+		$line =~ s/[\n\r]*$//;
+		if ( $line =~ m/^(\d?\d):(\d?\d):(\d?\d):(.+)$/ ) {
+			my $text = $4;
+			my $hh = sprintf("%02u",$1);
+			my $mm = sprintf("%02u",$2);
+			my $ss = sprintf("%02u",$3);
+			my $starttime = "$hh:$mm:$ss,000";
+			my $starttimesec = $1*60*60 + $2*60 + $3;
+			my $endtimesec = get_tmp_endtime($starttimesec,length($text),99999999999999999999);
+			my $endtime = seconds_2_time(int ($endtimesec));
+			$endtime = $endtime.",".(sprintf("%03u",($endtimesec - int($endtimesec))*1000));
+			$converted++;
+						
+			print "  Subtitle #$converted: start: $starttime end: $endtime, Text: $text\n" if ($debug);
+			
+			# convert line-ends
+			$text =~ s/\|/$le/g;
+			
+			write_srt($converted, $starttime, $endtime, $text);
+			
+		} else {
+			$failed++;
+			print "  failed to convert: $line\n" if ($debug);
+		}
+	}
+	print "$converted subtitles written\n" if (!$quiet);
+	print "$failed lines failed\n" if (!$quiet && $failed);
+}
+
+sub get_tmp_endtime {
+	my $starttime = shift;
+	my $length = shift;
+	my $nstarttime = shift;
+
+	my $duration = ((30/($length+8.8))-150)/($length+8.8)+17; # don't ask...
+	$duration =  sprintf("%.3f",$duration);
+
+	my $endtime = $starttime + $duration;
+
+	if ($endtime > $nstarttime ) {
+		$endtime = $nstarttime - 1;
+	}
+	print "  StartTime: $starttime; TextLength: $length; NextStartTime: $nstarttime; Duration: $duration; EndTime: $endtime\n" if ($debug);
+
+	return $endtime;
 }
 
 sub conv_txtsub {
@@ -274,6 +360,22 @@ sub frames_2_time {
 	return "$h:$m:$s,$ms";
 }
 
+sub seconds_2_time {
+	#converts second to hh:mm:ss
+	#used for mpl2
+	my $seconds = shift;
+	my $s = $seconds % 60;
+	my $min = int($seconds / 60);
+	my $m = $min % 60;
+	my $h = int($min / 60); 
+	$s = sprintf("%02u", $s);
+	$m = sprintf("%02u", $m);
+	$h = sprintf("%02u", $h);
+	print "    $seconds seconds -> $h:$m:$s\n" if ($debug);
+	
+	return "$h:$m:$s";
+}
+
 sub detect_format {
 	my $file = shift;
 	open INFILE, "$file" or die "Failed to open $file.\n";
@@ -297,7 +399,39 @@ sub detect_format {
 				$detected = "microdvd";
 			}
 		}
+
+		# mpl2 format
+		# looks like:
+		# [starttime][endtime]Text
+		# times are written in deciseconds, which means that [19] = 1.9 second
 		
+		if ( $line =~ m/^\[\d+\]\[\d+\].+$/ ) {
+			print "  seems to be mpl2 format\n" if ($debug);
+			my $line2 = <INFILE>;
+			$line2 =~ s/[\n\r]*$//;
+			print "  checking next line: $line2\n" if ($debug);
+			if ($line2 =~ m/^\[\d+\]\[\d+\].+$/ ) {
+				print "mpl2 format detected!\n" if ($debug);
+				$detected = "mpl2";
+			}
+		}
+
+		# tmp format
+		# looks like:
+		# hh:mm:ss:Text
+		# there is no endtime, so players usually display subtitles for a constant number of seconds
+		
+		if ( $line =~ m/^\d?\d:\d?\d:\d?\d:.+$/ ) {
+			print "  seems to be tmp format\n" if ($debug);
+			my $line2 = <INFILE>;
+			$line2 =~ s/[\n\r]*$//;
+			print "  checking next line: $line2\n" if ($debug);
+			if ($line2 =~ m/^\d?\d:\d?\d:\d?\d:.+$/ ) {
+				print "tmp format detected!\n" if ($debug);
+				$detected = "tmp";
+			}
+		}
+
 		# trying subrip format
 		# 3 lines:
 		# hh:mm:ss.ms,hh:mm:ss.ms
