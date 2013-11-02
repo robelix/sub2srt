@@ -19,8 +19,9 @@
 
 use strict;
 use warnings;
-my $version = "0.5.4";
+my $version = "0.5.5";
 
+use Scalar::Util qw(looks_like_number);
 use Getopt::Long;
 Getopt::Long::Configure("pass_through","no_ignore_case");
 my $help = 0;
@@ -105,6 +106,7 @@ if ($format eq "subrip") {
 	conv_subrip();
 }
 elsif ($format eq "microdvd") {
+	get_fps();
 	conv_microdvd();
 }
 elsif ($format eq "txtsub") {
@@ -252,24 +254,6 @@ sub conv_tmp {
 	print "$failed lines failed\n" if (!$quiet && $failed);
 }
 
-sub get_tmp_endtime {
-	my $starttime = shift;
-	my $length = shift;
-	my $nstarttime = shift;
-
-	my $duration = ((30/($length+8.8))-150)/($length+8.8)+17; # don't ask...
-	$duration =  sprintf("%.3f",$duration);
-
-	my $endtime = $starttime + $duration;
-
-	if ($endtime > $nstarttime ) {
-		$endtime = $nstarttime - 1;
-	}
-	print "  StartTime: $starttime; TextLength: $length; NextStartTime: $nstarttime; Duration: $duration; EndTime: $endtime\n" if ($debug);
-
-	return $endtime;
-}
-
 sub conv_txtsub {
 	my $converted = 0;
 	my $failed = 0;
@@ -305,7 +289,7 @@ sub conv_txtsub {
 					# convert line-ends
 					$text =~ s/\|/$le/g;
 					$text =~ s/\[br\]/$le/g;
-	
+
 					write_srt($converted, $starttime, $endtime, $text);
 				}
 				$starttime = $endtime;
@@ -336,9 +320,38 @@ sub write_srt {
 	print OUTFILE "$le";
 }
 
+sub get_fps {
+	# This sub will get fps from video file using mediainfo tool
+	# @todo Better searching for video files
+	my $videofile;
+	my $candfps;
+	my $candfile = $infile;
+	$candfile =~ s{\.[^.]+$}{};
+	my @vidExts=('avi', 'mkv', 'ogg', 'mp4', 'wmv', 'asf', 'mov');
+	foreach (@vidExts) {
+		if ( -f $candfile . "." . $_) {
+			$videofile = $candfile . "." . $_;
+			last;
+		} elsif ( -f $candfile . "." . uc($_)) {
+			$videofile = $candfile . "." . uc($_);
+			last;
+		}
+	}
+	if ( defined $videofile ) {
+		my $command = 'mediainfo --Output=Video\;%FrameRate% '.$videofile;
+		$candfps = `$command 2>&1`;
+		if (looks_like_number($candfps)) {
+			$fps = $candfps;
+			$fps =~ s/\R//g;
+			print "FPS is $fps (found by probing video file: $videofile)\n" if (!$quiet);
+		}
+	}
+}
+
 sub frames_2_time {
 	# convert frames to time 
 	# used for microdvd format
+
 	my $frames = shift;
 	my $seconds = $frames / $fps;
 	my $ms = ($seconds - int($seconds)) * 1000;
@@ -361,8 +374,8 @@ sub frames_2_time {
 }
 
 sub seconds_2_time {
-	#converts second to hh:mm:ss
-	#used for mpl2
+	#converts seconds to hh:mm:ss
+	#used for mpl2 format
 	my $seconds = shift;
 	my $s = $seconds % 60;
 	my $min = int($seconds / 60);
@@ -374,6 +387,24 @@ sub seconds_2_time {
 	print "    $seconds seconds -> $h:$m:$s\n" if ($debug);
 	
 	return "$h:$m:$s";
+}
+
+sub get_tmp_endtime {
+	my $starttime = shift;
+	my $length = shift;
+	my $nstarttime = shift;
+
+	my $duration = ((30/($length+8.8))-150)/($length+8.8)+17; # don't ask...
+	$duration =  sprintf("%.3f",$duration);
+
+	my $endtime = $starttime + $duration;
+
+	if ($endtime > $nstarttime ) {
+		$endtime = $nstarttime - 1;
+	}
+	print "  StartTime: $starttime; TextLength: $length; NextStartTime: $nstarttime; Duration: $duration; EndTime: $endtime\n" if ($debug);
+
+	return $endtime;
 }
 
 sub detect_format {
