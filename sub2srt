@@ -19,7 +19,7 @@
 
 use strict;
 use warnings;
-my $version = "0.5.4";
+my $version = "0.5.5";
 
 use Getopt::Long;
 Getopt::Long::Configure("pass_through","no_ignore_case");
@@ -33,6 +33,9 @@ my $license = 0;
 my $ntsc = 0;
 my $ntsc24 = 0;
 my $force = 0;
+my $convert = 0;
+my $fenc = "ISO-8859-1";
+my $tenc = "UTF-8";
 GetOptions("help|h",    \$help,
 	   "fps|f=f",   \$fps,
 	   "ntsc|n", 	\$ntsc,
@@ -42,7 +45,10 @@ GetOptions("help|h",    \$help,
 	   "debug|d",   \$debug,
 	   "quiet|q",   \$quiet,
 	   "license|l", \$license,
-	   "dos",       \$dos);
+	   "dos",       \$dos,
+	   "convert|c", \$convert,
+	   "fenc=s",    \$fenc,
+	   "tenc=s",    \$tenc);
 	   
 if ($quiet) { $debug = 0; }
 
@@ -123,6 +129,14 @@ elsif ($format eq "srt") {
 
 close INFILE;
 close OUTFILE;
+
+
+if($convert) {
+	my $tmpfile = "/tmp/tmp.srt";
+	system("mv $outfile $tmpfile");
+	system("piconv -f $fenc -t $tenc < $tmpfile > $outfile");
+	system("rm $tmpfile");
+}
 
 
 sub conv_subrip {
@@ -514,6 +528,11 @@ Options:
 			 
     --dos		Create output file with DOS line end (cr+lf)
 			Default: unix line end (lf)
+
+    -c --convert	To convert character encoding.
+    
+    --fenc=s		From encoding. Overrides ISO-8859-1
+    --tenc=s		To enconding. Overrides UTF-8
 
     --force		Overwrite existing files without prompt
    

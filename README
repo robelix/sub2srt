@@ -49,6 +49,10 @@ Have a look to the file COPYING included in the archive.
 
 Changelog:
 ----------
+10 Dec 2014: Toni Ahola
+ * sub2srt-0.5.5
+ - Added support to encode output with piconv
+
 02 Nov 2013: Krzysztof Trybowski
  * sub2srt-0.5.4
  - Added support for 2 input formats "mpl2" and "tmp"
