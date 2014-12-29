@@ -49,7 +49,7 @@ GetOptions("help|h",    \$help,
 	   "convert|c", \$convert,
 	   "fenc=s",    \$fenc,
 	   "tenc=s",    \$tenc);
-	   
+
 if ($quiet) { $debug = 0; }
 
 if ($help) { help(); }
@@ -155,14 +155,13 @@ sub conv_subrip {
 			$text =~ s/[\n\r]*$//;
 			my $empty = <INFILE>;
 			$converted++;
-		
+
 			print "  Subtitle #$converted: start: $starttime, end: $endtime, Text: $text\n" if ($debug);
-			
+
 			# convert line-ends
 			$text =~ s/\[br\]/$le/g;
-			
+
 			write_srt($converted, $starttime, $endtime, $text);
-		
 		} else {
 			if (!$converted) {
 				print "  Header line: $line1 ignored\n" if ($debug);
@@ -188,14 +187,13 @@ sub conv_microdvd {
 			$converted++;
 			my $starttime = frames_2_time($startframe);
 			my $endtime = frames_2_time($endframe);
-						
+
 			print "  Subtitle #$converted: start: $starttime, end: $endtime, Text: $text\n" if ($debug);
-			
+
 			# convert line-ends
 			$text =~ s/\|/$le/g;
-			
+
 			write_srt($converted, $starttime, $endtime, $text);
-			
 		} else {
 			$failed++;
 			print "  failed to convert: $line\n" if ($debug);
@@ -216,14 +214,13 @@ sub conv_mpl2 {
 			my $endtime = seconds_2_time(int ($2 / 10)).",".($2 %10)."00";
 			my $text = $3;
 			$converted++;
-						
+
 			print "  Subtitle #$converted: start: $starttime, end: $endtime, Text: $text\n" if ($debug);
-			
+
 			# convert line-ends
 			$text =~ s/\|/$le/g;
-			
+
 			write_srt($converted, $starttime, $endtime, $text);
-			
 		} else {
 			$failed++;
 			print "  failed to convert: $line\n" if ($debug);
@@ -249,14 +246,13 @@ sub conv_tmp {
 			my $endtime = seconds_2_time(int ($endtimesec));
 			$endtime = $endtime.",".(sprintf("%03u",($endtimesec - int($endtimesec))*1000));
 			$converted++;
-						
+
 			print "  Subtitle #$converted: start: $starttime end: $endtime, Text: $text\n" if ($debug);
-			
+
 			# convert line-ends
 			$text =~ s/\|/$le/g;
-			
+
 			write_srt($converted, $starttime, $endtime, $text);
-			
 		} else {
 			$failed++;
 			print "  failed to convert: $line\n" if ($debug);
@@ -290,7 +286,7 @@ sub conv_txtsub {
 	my $starttime = "";
 	while (my $line1 = <INFILE>) {
 		$line1 =~ s/[\n\r]*$//;
-	
+
 		if ($line1 =~ m/^\[(\d\d:\d\d:\d\d)\.?(\d\d\d)?\]$/) {
 			$starttime = $1;
 			if ($2) {
@@ -300,10 +296,10 @@ sub conv_txtsub {
 			}
 		} else {
 			my $text = $line1;
-			
+
 			my $line2 = <INFILE> || "";
 			$line2 =~ s/[\n\r]*$//;
-			
+
 			if ($line2 =~ m/^\[(\d\d:\d\d:\d\d)\.?(\d\d\d)?\]$/) {
 				my $endtime  = $1;
 				if ($2) {
@@ -319,7 +315,7 @@ sub conv_txtsub {
 					# convert line-ends
 					$text =~ s/\|/$le/g;
 					$text =~ s/\[br\]/$le/g;
-	
+
 					write_srt($converted, $starttime, $endtime, $text);
 				}
 				$starttime = $endtime;
@@ -343,7 +339,7 @@ sub write_srt {
 	my $start = shift;
 	my $end = shift;
 	my $text = shift;
-	
+
 	print OUTFILE "$nr$le";
 	print OUTFILE "$start --> $end$le";
 	print OUTFILE "$text$le";
@@ -351,7 +347,7 @@ sub write_srt {
 }
 
 sub frames_2_time {
-	# convert frames to time 
+	# convert frames to time
 	# used for microdvd format
 	my $frames = shift;
 	my $seconds = $frames / $fps;
@@ -365,12 +361,12 @@ sub frames_2_time {
 	my $s = $seconds % 60;
 	my $min = int($seconds / 60);
 	my $m = $min % 60;
-	my $h = int($min / 60); 
+	my $h = int($min / 60);
 	$s = sprintf("%02u", $s);
 	$m = sprintf("%02u", $m);
 	$h = sprintf("%02u", $h);
 	print "    $frames frames -> $seconds sec -> $h:$m:$s,$ms\n" if ($debug);
-	
+
 	return "$h:$m:$s,$ms";
 }
 
@@ -381,12 +377,12 @@ sub seconds_2_time {
 	my $s = $seconds % 60;
 	my $min = int($seconds / 60);
 	my $m = $min % 60;
-	my $h = int($min / 60); 
+	my $h = int($min / 60);
 	$s = sprintf("%02u", $s);
 	$m = sprintf("%02u", $m);
 	$h = sprintf("%02u", $h);
 	print "    $seconds seconds -> $h:$m:$s\n" if ($debug);
-	
+
 	return "$h:$m:$s";
 }
 
@@ -398,11 +394,11 @@ sub detect_format {
 	while (my $line = <INFILE>) {
 		$line =~ s/[\n\r]*$//;
 		print "  Trying line $i: $line \n" if $debug;
-		
+
 		# microdvd format
 		# looks like:
 		# {startframe}{endframe}Text
-		
+
 		if ( $line =~ m/^\{\d+\}\{\d+\}.+$/ ) {
 			print "  seems to be microdvd format\n" if ($debug);
 			my $line2 = <INFILE>;
@@ -418,7 +414,7 @@ sub detect_format {
 		# looks like:
 		# [starttime][endtime]Text
 		# times are written in deciseconds, which means that [19] = 1.9 second
-		
+
 		if ( $line =~ m/^\[\d+\]\[\d+\].+$/ ) {
 			print "  seems to be mpl2 format\n" if ($debug);
 			my $line2 = <INFILE>;
@@ -434,7 +430,7 @@ sub detect_format {
 		# looks like:
 		# hh:mm:ss:Text
 		# there is no endtime, so players usually display subtitles for a constant number of seconds
-		
+
 		if ( $line =~ m/^\d?\d:\d?\d:\d?\d:.+$/ ) {
 			print "  seems to be tmp format\n" if ($debug);
 			my $line2 = <INFILE>;
@@ -451,7 +447,7 @@ sub detect_format {
 		# hh:mm:ss.ms,hh:mm:ss.ms
 		# text
 		# (empty line)
-		
+
 		if ($line =~ m/^\d\d:\d\d:\d\d\.\d\d,\d\d:\d\d:\d\d\.\d\d$/) {
 			print "  seems to be subrip format\n" if ($debug);
 			my $line2 = <INFILE>;
@@ -466,15 +462,15 @@ sub detect_format {
 				$detected = "subrip";
 			}
 		}
-		
+
 		# trying subviewer .srt format
-		
+
 		if ($line =~ m/^\d\d:\d\d:\d\d\,\d\d\d\s-->\s\d\d:\d\d:\d\d\,\d\d\d$/) {
 			print "subviewer .srt format detected!\n" if ($debug);
 			$detected = "srt";
 		}
-		
-		# trying txtsub format 
+
+		# trying txtsub format
 		# (I called it so since it's often named .txt and I haven't found any common name for this)
 		# it looks like:
 		# [starttime]
@@ -485,7 +481,7 @@ sub detect_format {
 		# a) [00:02:05.000]
 		# b) [00:02:05]
 		# Both are supported
-		
+
 		if ($line =~ m/^\[\d\d:\d\d:\d\d(\.\d\d\d)?\]$/) {
 			print "  seems to be txtsub format\n" if ($debug);
 			my $line2 = <INFILE>;
@@ -498,7 +494,7 @@ sub detect_format {
 				$detected = "txtsub";
 			}
 		}
-		
+
 		$i++;
 		last if ($detected or $i > 50);
 	}
@@ -513,7 +509,7 @@ sub2srt [options] inputfile.sub [outputfile.srt]
 
     Convert subrip and microdvd ".sub" subtitle files to subviewer ".srt" format
     (the format accepted by ogmmerge for multiplexing into ogm files)
-    
+
 
 Options:
     -h --help           Display this message.
@@ -522,20 +518,20 @@ Options:
 
     -f=n --fps=n	Fps to be used if input file is frame-based microdvd-format
 			Default: 25 fps. Ignored if input format is time-based.
-			
+
     -n  --ntsc		Sets the framerate to 29.97 fps. Overrides --fps.
     -n2 --ntsc24	Sets the framerate to 23.976 fps. Overrides --fps and --ntsc.
-			 
+
     --dos		Create output file with DOS line end (cr+lf)
 			Default: unix line end (lf)
 
     -c --convert	To convert character encoding.
-    
+
     --fenc=s		From encoding. Overrides ISO-8859-1
     --tenc=s		To enconding. Overrides UTF-8
 
     --force		Overwrite existing files without prompt
-   
+
     -d --debug		Print debug information
     -q --quiet		No output
 
@@ -548,7 +544,7 @@ inputfile.sub
 [outputfile.srt]
     Output file
     Default: inputfile.srt
-    
+
 __HELP__
 exit 2;
 }
