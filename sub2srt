@@ -132,7 +132,7 @@ close OUTFILE;
 
 
 if($convert) {
-	my $tmpfile = "/tmp/tmp.srt";
+	my $tmpfile = tmpnam();
 	system("mv $outfile $tmpfile");
 	system("piconv -f $fenc -t $tenc < $tmpfile > $outfile");
 	system("rm $tmpfile");
