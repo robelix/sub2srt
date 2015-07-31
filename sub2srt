@@ -19,10 +19,13 @@
 
 use strict;
 use warnings;
-my $version = "0.5.5";
+my $version = "0.5.6";
 
 use Getopt::Long;
 Getopt::Long::Configure("pass_through","no_ignore_case");
+use Encode("from_to","find_encoding");
+use File::Copy("mv");
+use File::Temp;
 my $help = 0;
 my $fps = 25;
 my $showvers = 0;
@@ -132,10 +135,33 @@ close OUTFILE;
 
 
 if($convert) {
-	my $tmpfile = tmpnam();
-	system("mv $outfile $tmpfile");
-	system("piconv -f $fenc -t $tenc < $tmpfile > $outfile");
-	system("rm $tmpfile");
+    # Check if $fenc and $tenc are valid
+    if (!find_encoding($fenc)) {
+        print "--> $fenc <-- is not a valid From encoding. Encoding conversion skipped.\n";
+        exit 0;
+    }
+    if (!find_encoding($tenc)) {
+        print "--> $tenc <-- is not a valid To encoding. Encoding conversion skipped.\n";
+        exit 0;
+    }
+
+    my $tmpfile = tmpnam();
+
+    open(INPUT,  "< :raw", $outfile)
+        or die "Unable to open < $outfile for reading: $!\n. Encoding conversion skipped.\n";
+    open(OUTPUT, "> :raw",  $tmpfile)
+        or die "Unable to open > $tmpfile for writing: $!\n. Encoding conversion skipped.\n";
+    while (<INPUT>) {
+        from_to($_, $fenc, $tenc, Encode::FB_CROAK);
+        print OUTPUT;
+    }
+
+    close INPUT  or die "Unable to close $outfile: $!\n";
+    close OUTPUT or die "Unable to close $tmpfile: $!\n";
+
+    mv($tmpfile, $outfile);
+
+    print "Encoding convertion from \"$fenc\" to \"$tenc\" done.\n"  if (!$quiet);
 }
 
 
