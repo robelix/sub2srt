@@ -1,13 +1,14 @@
-sub2srt  - Convert subtitles from ".sub" to subviewer ".srt" format
+sub2srt  - Convert subtitles from ".sub" to SubRip ".srt" format
 
 
 (c) 2003-2005 Roland "Robelix" Obermayer <roland\@robelix.com>
 Project Homepage: http://www.robelix.com/sub2srt/
 
 
-sub2srt is a simple tool to convert 2 common subtitle formats (microdvd
-and subrip - both are known as ".sub") to subviewer ".srt" format.
+sub2srt is a simple tool to convert 2 common subtitle formats (MicroDVD
+and SubViewer - both are known as ".sub") to SubRip ".srt" format.
 This is the format ogmmerge accepts for multiplexing into ogm streams.
+This format is also used by mkvmerge for multiplexing into mkv streams.
 
 
 This is Beta Software!
@@ -20,14 +21,14 @@ Please report bugs, problems, patches... to sub2srt@robelix.com
 
 What it does not:
 -----------------
-It does not - and will never - convert DVD-subtitles or vobsub.
+It does not - and will never - convert DVD-subtitles or VobSub.
 Google on if you need this ;)
 
 
 Installation:
 -------------
 Not necessary ;) - it's just a single perl-script.
-But you may want to copy sub2srt to a directory that's in your $PATH - 
+But you may want to copy sub2srt to a directory that's in your $PATH -
 like /usr/local/bin or /usr/bin.
 
 
@@ -49,6 +50,12 @@ Have a look to the file COPYING included in the archive.
 
 Changelog:
 ----------
+01 Aug 2015: PhobosK
+ * sub2srt-0.5.6
+ - Fixed character encoding conversion using Encode instead of piconv
+ - Fixed subtitle naming mix-up
+ - Fixed some spelling mistakes
+
 10 Dec 2014: Toni Ahola
  * sub2srt-0.5.5
  - Added support to encode output with piconv
@@ -56,7 +63,7 @@ Changelog:
 02 Nov 2013: Krzysztof Trybowski
  * sub2srt-0.5.4
  - Added support for 2 input formats "mpl2" and "tmp"
- 
+
 15 Jan 2005: Roland Obermayer <roland@robelix.com>
  * sub2srt-0.5.3
  - Added support for a third input format "txtsub"
@@ -74,7 +81,7 @@ Changelog:
 
 31 Aug 2003: Roland Obermayer <roland@robelix.com>
  * sub2srt-0.5.1
- - Bugfix in the microdvd conversion routine
+ - Bugfix in the MicroDVD conversion routine
 
 26 Aug 2003: Roland Obermayer <roland@robelix.com>
  * sub2srt-0.5

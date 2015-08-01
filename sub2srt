@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-#     sub2srt  - Convert subtitles from microdvd or subrip ".sub" to subviewer ".srt" format
+#    sub2srt  - Convert subtitles from MicroDVD or SubViewer ".sub" to SubRip ".srt" format
 #    (c) 2003-2005 Roland "Robelix" Obermayer <roland@robelix.com>
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -19,10 +19,13 @@
 
 use strict;
 use warnings;
-my $version = "0.5.5";
+my $version = "0.5.6";
 
 use Getopt::Long;
 Getopt::Long::Configure("pass_through","no_ignore_case");
+use Encode("from_to","find_encoding");
+use File::Copy("mv");
+use File::Temp;
 my $help = 0;
 my $fps = 25;
 my $showvers = 0;
@@ -66,7 +69,7 @@ my $infile = shift || '';
 if (!$infile) { help(); }
 
 my $outfile = shift || '';
-if (!$outfile) { 
+if (!$outfile) {
 	$outfile = $infile;
 	$outfile =~ s/(\.sub|\.txt)$//i;
 	$outfile .= ".srt";
@@ -107,8 +110,8 @@ print "Converting from $format to srt\n" if ($format ne "srt" && !$quiet);
 open INFILE, "$infile" or die "Unable to open $infile for reading\n";
 open OUTFILE, ">$outfile" or die "Unable to open $outfile for writing\n";
 
-if ($format eq "subrip") {
-	conv_subrip();
+if ($format eq "subviewer") {
+	conv_subviewer();
 }
 elsif ($format eq "microdvd") {
 	conv_microdvd();
@@ -123,7 +126,7 @@ elsif ($format eq "tmp") {
 	conv_tmp();
 }
 elsif ($format eq "srt") {
-	print "Input file is already subviewer srt format.\n";
+	print "Input file is already SubRip srt format.\n";
 }
 
 
@@ -132,14 +135,37 @@ close OUTFILE;
 
 
 if($convert) {
-	my $tmpfile = tmpnam();
-	system("mv $outfile $tmpfile");
-	system("piconv -f $fenc -t $tenc < $tmpfile > $outfile");
-	system("rm $tmpfile");
+    # Check if $fenc and $tenc are valid
+    if (!find_encoding($fenc)) {
+        print "--> $fenc <-- is not a valid From encoding. Encoding conversion skipped.\n";
+        exit 0;
+    }
+    if (!find_encoding($tenc)) {
+        print "--> $tenc <-- is not a valid To encoding. Encoding conversion skipped.\n";
+        exit 0;
+    }
+
+    my $tmpfile = tmpnam();
+
+    open(INPUT,  "< :raw", $outfile)
+        or die "Unable to open < $outfile for reading: $!\n. Encoding conversion skipped.\n";
+    open(OUTPUT, "> :raw",  $tmpfile)
+        or die "Unable to open > $tmpfile for writing: $!\n. Encoding conversion skipped.\n";
+    while (<INPUT>) {
+        from_to($_, $fenc, $tenc, Encode::FB_CROAK);
+        print OUTPUT;
+    }
+
+    close INPUT  or die "Unable to close $outfile: $!\n";
+    close OUTPUT or die "Unable to close $tmpfile: $!\n";
+
+    mv($tmpfile, $outfile);
+
+    print "Encoding conversion from \"$fenc\" to \"$tenc\" done.\n"  if (!$quiet);
 }
 
 
-sub conv_subrip {
+sub conv_subviewer {
 	my $converted = 0;
 	my $failed = 0;
 	while (my $line1 = <INFILE>) {
@@ -348,7 +374,7 @@ sub write_srt {
 
 sub frames_2_time {
 	# convert frames to time
-	# used for microdvd format
+	# used for MicroDVD format
 	my $frames = shift;
 	my $seconds = $frames / $fps;
 	my $ms = ($seconds - int($seconds)) * 1000;
@@ -395,17 +421,17 @@ sub detect_format {
 		$line =~ s/[\n\r]*$//;
 		print "  Trying line $i: $line \n" if $debug;
 
-		# microdvd format
+		# MicroDVD format
 		# looks like:
 		# {startframe}{endframe}Text
 
 		if ( $line =~ m/^\{\d+\}\{\d+\}.+$/ ) {
-			print "  seems to be microdvd format\n" if ($debug);
+			print "  seems to be MicroDVD format\n" if ($debug);
 			my $line2 = <INFILE>;
 			$line2 =~ s/[\n\r]*$//;
 			print "  checking next line: $line2\n" if ($debug);
 			if ($line2 =~ m/^\{\d+\}\{\d+\}.+$/) {
-				print "microdvd format detected!\n" if ($debug);
+				print "MicroDVD format detected!\n" if ($debug);
 				$detected = "microdvd";
 			}
 		}
@@ -442,14 +468,14 @@ sub detect_format {
 			}
 		}
 
-		# trying subrip format
+		# trying SubViewer format
 		# 3 lines:
 		# hh:mm:ss.ms,hh:mm:ss.ms
 		# text
 		# (empty line)
 
 		if ($line =~ m/^\d\d:\d\d:\d\d\.\d\d,\d\d:\d\d:\d\d\.\d\d$/) {
-			print "  seems to be subrip format\n" if ($debug);
+			print "  seems to be SubViewer format\n" if ($debug);
 			my $line2 = <INFILE>;
 			$line2 =~ s/[\n\r]*$//;
 			my $line3 = <INFILE>;
@@ -458,15 +484,15 @@ sub detect_format {
 			$line4 =~ s/[\n\r]*$//;
 			print "  checking the next lines:\n    $line2\n    $line3\n    $line4\n" if ($debug);
 			if ($line2 =~ m/^.+$/ && $line3 =~ m/^$/ && $line4 =~ m/^\d\d:\d\d:\d\d\.\d\d,\d\d:\d\d:\d\d\.\d\d$/) {
-				print "subrip format detected!\n" if ($debug);
-				$detected = "subrip";
+				print "SubViewer format detected!\n" if ($debug);
+				$detected = "subviewer";
 			}
 		}
 
-		# trying subviewer .srt format
+		# trying SubRip .srt format
 
 		if ($line =~ m/^\d\d:\d\d:\d\d\,\d\d\d\s-->\s\d\d:\d\d:\d\d\,\d\d\d$/) {
-			print "subviewer .srt format detected!\n" if ($debug);
+			print "SubRip .srt format detected!\n" if ($debug);
 			$detected = "srt";
 		}
 
@@ -477,7 +503,7 @@ sub detect_format {
 		# subtitle-text
 		# [endtime]
 		# (the endtime can be the starttime of the next sub)
-		# I've seen two variants with slightly diffrent time-formats
+		# I've seen two variants with slightly different time-formats
 		# a) [00:02:05.000]
 		# b) [00:02:05]
 		# Both are supported
@@ -507,7 +533,7 @@ print <<__HELP__;
 
 sub2srt [options] inputfile.sub [outputfile.srt]
 
-    Convert subrip and microdvd ".sub" subtitle files to subviewer ".srt" format
+    Convert SubViewer and MicroDVD ".sub" subtitle files to SubRip ".srt" format
     (the format accepted by ogmmerge for multiplexing into ogm files)
 
 
@@ -516,7 +542,7 @@ Options:
     -v --version	Display Program version.
     -l --license	Display License information.
 
-    -f=n --fps=n	Fps to be used if input file is frame-based microdvd-format
+    -f=n --fps=n	Fps to be used if input file is frame-based MicroDVD-format
 			Default: 25 fps. Ignored if input format is time-based.
 
     -n  --ntsc		Sets the framerate to 29.97 fps. Overrides --fps.
@@ -528,7 +554,7 @@ Options:
     -c --convert	To convert character encoding.
 
     --fenc=s		From encoding. Overrides ISO-8859-1
-    --tenc=s		To enconding. Overrides UTF-8
+    --tenc=s		To encoding. Overrides UTF-8
 
     --force		Overwrite existing files without prompt
 
@@ -538,7 +564,7 @@ Options:
 
 inputfile.sub
     Input file
-    Both types usally have the ending .sub, the format is autodetected.
+    Both types usually have the ending .sub, the format is auto-detected.
 
 
 [outputfile.srt]
